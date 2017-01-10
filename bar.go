@@ -31,6 +31,9 @@ var (
 
 	// ErrMaxCurrentReached is error when trying to set current value that exceeds the total value
 	ErrMaxCurrentReached = errors.New("errors: current value is greater total value")
+
+	//ErrBarStepOutOfRange indicates an issue with a current progress out of range of step slice
+	ErrBarStepOutOfRange = errors.New("Err: Current step out of range")
 )
 
 // Bar represents a progress bar
@@ -67,6 +70,8 @@ type Bar struct {
 
 	appendFuncs  []DecoratorFunc
 	prependFuncs []DecoratorFunc
+
+	Steps []*Step
 }
 
 // DecoratorFunc is a function that can be prepended and appended to the progress bar
@@ -82,6 +87,7 @@ func NewBar(total int) *Bar {
 		Head:     Head,
 		Fill:     Fill,
 		Empty:    Empty,
+		Steps:    make([]*Step, total),
 
 		mtx: &sync.RWMutex{},
 	}
@@ -95,6 +101,11 @@ func (b *Bar) Set(n int) error {
 	if n > b.Total {
 		return ErrMaxCurrentReached
 	}
+
+	if n > len(b.Steps) {
+		return ErrBarStepOutOfRange
+	}
+
 	b.current = n
 	return nil
 }
@@ -122,6 +133,41 @@ func (b *Bar) Current() int {
 	b.mtx.RLock()
 	defer b.mtx.RUnlock()
 	return b.current
+}
+
+// AddStep adds an additional step to the progress bar
+func (b *Bar) AddStep(name string) *Bar {
+	b.mtx.Lock()
+	defer b.mtx.Unlock()
+	b.Steps = append(b.Steps, &Step{Name: name, Status: Waiting})
+	b.Total = len(b.Steps)
+	return b
+}
+
+// CurrentStep returns the current step
+func (b *Bar) CurrentStep() (*Step, error) {
+	b.mtx.RLock()
+	defer b.mtx.RUnlock()
+
+	if b.Steps == nil {
+		return nil, nil
+	}
+
+	if b.current > len(b.Steps) {
+		return nil, ErrBarStepOutOfRange
+	}
+
+	return b.Steps[b.current-1], nil
+}
+
+// UpdateStatus updates the current step's status
+func (b *Bar) UpdateStatus(status StepStatus) *Bar {
+	b.mtx.Lock()
+	defer b.mtx.Unlock()
+	if step, err := b.CurrentStep(); err != nil {
+		step.Status = status
+	}
+	return b
 }
 
 // AppendFunc runs the decorator function and renders the output on the right of the progress bar
