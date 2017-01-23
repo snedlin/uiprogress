@@ -53,8 +53,8 @@ func New() *Progress {
 }
 
 // AddBar creates a new progress bar and adds it to the default progress container
-func AddBar(total int) *Bar {
-	return defaultProgress.AddBar(total)
+func AddBar(total int, steps []*Step) *Bar {
+	return defaultProgress.AddBar(total, steps)
 }
 
 // Start starts the rendering the progress of progress bars using the DefaultProgress. It listens for updates using `bar.Set(n)` and new bars when added using `AddBar`
@@ -73,12 +73,23 @@ func Listen() {
 }
 
 // AddBar creates a new progress bar and adds to the container
-func (p *Progress) AddBar(total int) *Bar {
+func (p *Progress) AddBar(total int, steps []*Step) *Bar {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
-	bar := NewBar(total)
-	bar.Width = p.Width
+	var bar *Bar
+	if steps != nil {
+		bar = NewBar(len(steps))
+		for _, step := range steps {
+			bar.AddStep(step)
+		}
+		bar.Width = p.Width
+
+	} else {
+		bar = NewBar(total)
+		bar.Width = p.Width
+	}
+
 	p.Bars = append(p.Bars, bar)
 	return bar
 }

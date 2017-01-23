@@ -14,8 +14,12 @@ const (
 // StepStatus is an enumeration of statuses for steps
 type StepStatus int
 
+// StepFunc is a function that returns a StepStatus
+type StepFunc func() StepStatus
+
 // Step represents a single step that makes up a unit of progress
 type Step struct {
 	Name   string
 	Status StepStatus
+	Do     StepFunc
 }

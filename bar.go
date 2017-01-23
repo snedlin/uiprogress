@@ -136,10 +136,10 @@ func (b *Bar) Current() int {
 }
 
 // AddStep adds an additional step to the progress bar
-func (b *Bar) AddStep(name string) *Bar {
+func (b *Bar) AddStep(step *Step) *Bar {
 	b.mtx.Lock()
 	defer b.mtx.Unlock()
-	b.Steps = append(b.Steps, &Step{Name: name, Status: Waiting})
+	b.Steps = append(b.Steps, step)
 	b.Total = len(b.Steps)
 	return b
 }
